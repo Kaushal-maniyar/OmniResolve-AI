@@ -1,0 +1,4 @@
+id,status,problem_des
+T001,Resolved,Intermittent broadband connectivity fault
+T002,Open,High packet loss on enterprise leased line
+T003,Escalated,SIP call quality degradation and packet drop

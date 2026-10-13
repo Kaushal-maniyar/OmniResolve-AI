@@ -1,0 +1,5 @@
+id,date,content
+M001,2026-10-09T09:00:00+05:30,My internet connection keeps dropping since morning.
+M002,2026-10-09T09:02:00+05:30,Please check line diagnostic logs and ONT status.
+M003,2026-10-09T09:10:00+05:30,I have logged complaint CMP001 for technical review.
+M004,2026-10-09T09:15:00+05:30,Leased line experiencing 15 percent packet loss.

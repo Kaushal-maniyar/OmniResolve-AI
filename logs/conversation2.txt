@@ -1,0 +1,158 @@
+PS D:\hackathon> powershell -ExecutionPolicy Bypass -File .\scripts\chat-agent.ps1 -CustomerId "C001"
+Launching Interactive WhatsApp Customer Support Chat Session...
+
+=================================================================
+      [ WhatsApp Customer Support - OmniResolve AI ]
+=================================================================
+ Connected Customer ID : C001
+ Active Channel        : WHATSAPP
+ Session Thread ID     : wa_thread_0c21c5
+-----------------------------------------------------------------
+ Instructions:
+  - Type your message to start chatting.
+  - Perform basic troubleshooting when guided.
+  - Reply 'issue persists' or 'didn't work' if troubleshooting fails.
+  - Type 'exit' or 'quit' to end session.
+=================================================================
+
+
+[Customer (C001)] > hi
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-53408E)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-B31B65)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 1)]
+-----------------------------------------------------------------
+Hello! 👋 Welcome to OmniResolve AI Support.
+
+How can I help you with your enterprise telecommunications services today? Whether it's a question about your Business Broadband, SIP Trunk, or any other service, I'm here to assist!
+
+[Customer (C001)] > My Broadband is not working properly. Please solve this issue as soon as possible
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-8780BB)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-8C244C)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 2)]
+-----------------------------------------------------------------
+I am very sorry to hear that your Business Broadband is experiencing issues. I understand how critical a stable connection is for your business, and I will do my best to help you resolve this as quickly as possible.
+
+To guide you through the correct troubleshooting steps, could you please tell me a bit more about the symptoms? For example:
+1. Is the internet completely down, or is it just slow/unstable?
+2. Are you seeing any specific error messages or lights on your router/modem (e.g., red lights, blinking indicators)?
+3. Does the issue affect all devices on the network, or just specific ones?
+
+In the meantime, I can retrieve the standard diagnostic procedures for Business Broadband connectivity issues. Would you like me to start with the general troubleshooting steps?
+
+[Customer (C001)] > Network connectivity is down
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-2DE3E6)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-CE433F)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 3)]
+ Focus Product: P001
+-----------------------------------------------------------------
+I understand the urgency. Since your network connectivity is completely down, please follow these **step-by-step diagnostic procedures** for your Business Broadband ONT modem:
+
+1. **Inspect the Fiber Cable**
+   - Check the thin yellow fiber patch cord connected to your ONT modem.
+   - Ensure it is firmly clicked into the green SC/APC optical port.
+
+2. **Reboot the ONT Modem**
+   - Power off the modem using the rear power button.
+   - Wait for **30 seconds**.
+   - Turn the power back on.
+   - *Expected Result*: The Power LED should turn solid GREEN. Please wait about 2 minutes for the optical sync to complete.
+
+3. **Verify the Signal LED**
+   - Observe the **'PON'** and **'LOS'** indicator lights on the modem.
+   - *Expected Result*: The **'PON'** LED should become solid GREEN, and the **'LOS'** light should turn completely OFF.
+
+**Important Safety Warning:** ⚠️ Do not look directly into the optical fiber connector port, as infrared laser radiation can cause irreversible eye injury.
+
+Please try these steps and let me know the status of the **PON** and **LOS** lights after the reboot. If the **LOS** light remains RED, it may indicate a physical fiber issue that requires a field engineer, and I will escalate it immediately for you.
+
+[Customer (C001)] > I have done all the stpes still the network connectivity is down
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-B64B9F)
+Neo4j Ticket Persisted: Ticket(TCK-D3A74B) -[:RAISES]-> Agent(A002) & Customer(C001)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-FD63D8)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 4)]
+ Focus Product: P001
+-----------------------------------------------------------------
+I have successfully raised a formal support ticket for your Business Broadband issue. Here are the details:
+
+*   **Ticket ID:** TCK-D3A74B
+*   **Status:** Escalated to Tier-2
+*   **Priority:** High
+
+Your case has been flagged for immediate review by our senior network engineering team. A field technician will be dispatched to inspect the physical fiber line and restore your connectivity as soon as possible.
+
+We will keep you updated on the progress via this channel. Thank you for your patience, and we apologize for the disruption to your business.
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : TCK-D3A74B
+  Status    : Escalated to Tier-2
+  Priority  : High
+*****************************************************************
+
+[Customer (C001)] > how many tickets do I have?
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-218A62)
+Received notification from DBMS server: <GqlStatusObject gql_status='01G11', status_description='warn: null value eliminated in set function', position=None, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n                MATCH (c:Customer {id: $cid})\n                OPTIONAL MATCH (c)-[:SENT]->(m:Message)-[:ASSOCIATED]->(t1:Ticket)\n                OPTIONAL MATCH (c)-[:HAS_TICKET]->(t2:Ticket)\n                WITH collect(DISTINCT t1) + collect(DISTINCT t2) AS all_tickets\n                UNWIND (CASE WHEN size(all_tickets) > 0 THEN all_tickets ELSE [null] END) AS t\n                WITH t WHERE t IS NOT NULL\n                RETURN t.id AS id, t.status AS status, coalesce(t.problem_description, t.problem_des, '') AS desc\n                "
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-72B717)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 5)]
+ Focus Product: P001
+-----------------------------------------------------------------
+You currently have **1 active ticket**:
+
+*   **Ticket ID:** TCK-D3A74B
+*   **Status:** Escalated to Tier-2
+*   **Priority:** High
+*   **Issue:** Business Broadband connectivity down (field engineer dispatch required).
+
+You have no other open or resolved tickets in your history. Is there anything else I can help you with?
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : C001
+  Status    : None
+  Priority  : None
+*****************************************************************
+
+[Customer (C001)] > Thank you
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-84E443)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-A17E1C)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 6)]
+ Focus Product: P001
+-----------------------------------------------------------------
+You’re very welcome! I’m glad I could help.
+
+Please keep an eye on this chat for updates regarding your ticket **TCK-D3A74B**. Our engineering team is working to get your Business Broadband back online as quickly as possible.
+
+If you have any other questions or need assistance with your Enterprise WiFi or any other service, feel free to reach out anytime. Have a great day!
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : C001
+  Status    : None
+  Priority  : None
+*****************************************************************
+
+[Customer (C001)] >

@@ -1,0 +1,26 @@
+interaction_id,customer_id,channel_id,agent_id,product_id,type,occurred_at,subject,sentiment,summary
+I001,C001,CH001,A001,P001,Complaint,2026-09-01T09:15:00+05:30,Intermittent broadband connectivity,Negative,Customer reported intermittent internet connectivity causing business interruption.
+I002,C001,CH002,A003,P001,Troubleshooting,2026-09-02T11:30:00+05:30,Line diagnostics and signal check,Neutral,Agent ran remote line diagnostics and checked signal parameters.
+I003,C001,CH003,A002,P001,Resolution,2026-09-03T15:45:00+05:30,"Fault fixed, service stable",Positive,Field engineer repaired physical line fault and confirmed service stability.
+I004,C002,CH001,A001,P002,Complaint,2026-09-05T10:00:00+05:30,High packet loss on leased line,Negative,Customer reported severe packet loss impacting leased line performance.
+I005,C002,CH004,A004,P002,Follow-up,2026-09-07T14:20:00+05:30,"Packet loss persists, asking for update",Negative,Customer requested urgent status update on unresolved packet loss ticket.
+I006,C003,CH002,A003,P003,Complaint,2026-09-08T08:40:00+05:30,SIP call quality degradation,Negative,Customer reported voice distortion and call drops on SIP trunk.
+I007,C003,CH003,A002,P003,Troubleshooting,2026-09-08T13:10:00+05:30,Codec and jitter analysis,Neutral,Technical team analyzed network trace and identified codec mismatch.
+I008,C003,CH002,A005,P003,Resolution,2026-09-09T10:25:00+05:30,"Trunk reconfigured, quality restored",Positive,SBC configuration updated and voice quality verified successfully.
+I009,C004,CH001,A001,P001,Complaint,2026-09-10T16:05:00+05:30,Intermittent broadband connectivity,Negative,Customer reported frequent broadband disconnection events.
+I010,C004,CH004,A004,P001,Troubleshooting,2026-09-12T11:15:00+05:30,Router reset and line test,Neutral,Support performed router reboot and initiated copper line health test.
+I011,C005,CH003,A002,P004,Complaint,2026-09-11T09:30:00+05:30,Oracle SBC registration failure,Negative,Enterprise customer reported SBC registration failure during peak hours.
+I012,C005,CH002,A003,P004,Resolution,2026-09-12T17:00:00+05:30,Registration restored after config fix,Positive,Network ops reloaded SBC security policy and restored registration.
+I013,C006,CH004,A004,P005,Query,2026-09-14T12:00:00+05:30,Enterprise WiFi authentication problem,Neutral,Consumer requested assistance with enterprise WiFi portal login error.
+I014,C006,CH001,A001,P005,Follow-up,2026-09-16T10:10:00+05:30,Still unable to authenticate,Neutral,Customer reported login error persists after password reset.
+I015,C007,CH001,A001,P001,Complaint,2026-09-15T18:20:00+05:30,Intermittent broadband connectivity,Negative,Customer experienced speed drop and signal loss during evening.
+I016,C007,CH002,A003,P001,Resolution,2026-09-16T12:35:00+05:30,Line fault cleared,Positive,Ground team replaced damaged drop wire and confirmed internet speeds.
+I017,C008,CH001,A002,P003,Complaint,2026-09-17T09:05:00+05:30,SIP call quality degradation,Negative,Customer reported call mute issues affecting inbound sales line.
+I018,C008,CH002,A005,P003,Escalation,2026-09-17T14:50:00+05:30,Escalated to escalation team,Negative,Issue escalated to tier-3 engineering due to business impact.
+I019,C008,CH003,A002,P003,Follow-up,2026-09-18T11:40:00+05:30,Awaiting escalation outcome,Negative,Customer inquired about expected ETA for escalation resolution.
+I020,C009,CH004,A004,P005,Query,2026-09-19T13:25:00+05:30,Enterprise WiFi authentication problem,Neutral,User reported 802.1X certificate validation error on laptop.
+I021,C009,CH001,A001,P005,Resolution,2026-09-20T10:50:00+05:30,Credentials re-provisioned,Positive,Helpdesk issued new root certificate and user logged in successfully.
+I022,C010,CH001,A002,P002,Complaint,2026-09-21T09:45:00+05:30,High packet loss on leased line,Negative,Enterprise client logged high latency and 15% packet drop on primary link.
+I023,C010,CH002,A003,P002,Troubleshooting,2026-09-22T15:30:00+05:30,Link utilisation and path trace,Neutral,NOC ran path trace and pinpointed upstream provider node congestion.
+I024,C010,CH003,A002,P002,Follow-up,2026-09-23T11:05:00+05:30,Packet loss continues,Negative,Client reported persistent link instability during core trading hours.
+I025,C010,CH002,A005,P002,Escalation,2026-09-24T16:40:00+05:30,Escalated for carrier-side investigation,Negative,Escalated directly to upstream carrier operations team for priority repair.

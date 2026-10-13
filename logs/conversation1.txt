@@ -1,0 +1,107 @@
+PS D:\hackathon> powershell -ExecutionPolicy Bypass -File .\scripts\chat-agent.ps1 -CustomerId "C001"
+Launching Interactive WhatsApp Customer Support Chat Session...
+
+=================================================================
+      [ WhatsApp Customer Support - OmniResolve AI ]
+=================================================================
+ Connected Customer ID : C001
+ Active Channel        : WHATSAPP
+ Session Thread ID     : wa_thread_ef91ba
+-----------------------------------------------------------------
+ Instructions:
+  - Type your message to start chatting.
+  - Perform basic troubleshooting when guided.
+  - Reply 'issue persists' or 'didn't work' if troubleshooting fails.
+  - Type 'exit' or 'quit' to end session.
+=================================================================
+
+
+[Customer (C001)] > Hi
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-83D020)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-55057C)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 1)]
+-----------------------------------------------------------------
+Hello! Welcome to OmniResolve AI. How can I help you today?
+
+[Customer (C001)] > My Broadband is not wokring. Could you please tell me what to do?
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-9FD164)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-CA79D1)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 2)]
+ Focus Product: P001
+-----------------------------------------------------------------
+I'm sorry to hear your Business Broadband is down. Let's try these basic troubleshooting steps first:
+
+1. **Inspect the Fiber Cable**
+   - Check the thin yellow fiber patch cord connected to your ONT modem.
+   - Make sure it is firmly clicked into the green SC/APC optical port.
+
+2. **Reboot the ONT Modem**
+   - Power off the modem using the rear power button.
+   - Wait 30 seconds, then turn it back on.
+   - Wait about 2 minutes for the modem to sync.
+
+3. **Check the Signal LEDs**
+   - Look at the 'PON' and 'LOS' indicators on the modem.
+   - **Expected result**: The 'PON' LED should be solid GREEN, and the 'LOS' light should be completely OFF.
+
+**Important Safety Note:** Please do not look directly into the optical fiber connector port, as infrared laser radiation can cause eye injury.
+
+Could you please try these steps and let me know what the LED status shows? If the 'LOS' light remains RED after these steps, please let me know, and I will escalate this for a field engineer dispatch.
+
+[Customer (C001)] > I did the all the steps and still I got the same issue.
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-9A89EE)
+Neo4j Ticket Persisted: Ticket(TCK-2E695C) -[:RAISES]-> Agent(A002)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-6EFDAA)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 3)]
+ Focus Product: P001
+-----------------------------------------------------------------
+I'm sorry to hear the issue persists. Since the basic troubleshooting steps didn't resolve the problem, I've escalated this to our senior network engineering team.
+
+Here are your ticket details:
+- **Ticket ID:** TCK-2E695C
+- **Status:** Escalated to Tier-2
+- **Priority:** High
+
+A field technician or network engineer will follow up with you shortly to investigate the fiber line and restore your connectivity. Please keep your phone available for their callback. Is there anything else I can assist you with in the meantime?
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : TCK-2E695C
+  Status    : Escalated to Tier-2
+  Priority  : High
+*****************************************************************
+
+[Customer (C001)] > Thank you
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C001) -[:SENT]-> Message(MSG-8D37ED)
+Neo4j Persisted Agent Response: Agent(A002) -[:SENT]-> Message(MSG-RESP-E4652C)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 4)]
+ Focus Product: P001
+-----------------------------------------------------------------
+You're very welcome! I hope your connection is restored soon. If you need any further assistance, please don't hesitate to reach out. Have a great day!
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : TCK-2E695C
+  Status    : Escalated to Tier-2
+  Priority  : High
+*****************************************************************
+
+[Customer (C001)] >
+
+[WhatsApp] Chat session terminated by user.

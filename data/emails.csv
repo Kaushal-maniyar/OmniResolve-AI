@@ -1,0 +1,3 @@
+id,date,sub,body
+E001,2026-10-09T09:20:00+05:30,Broadband Disconnection Report,Detailed line logs showing packet loss at hop 4.
+E002,2026-10-09T10:00:00+05:30,Leased Line Technical Update,Ground engineer dispatched for optic fiber splice repair.

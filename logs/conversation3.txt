@@ -1,0 +1,166 @@
+[WhatsApp] Chat session terminated by user.
+PS D:\hackathon> powershell -ExecutionPolicy Bypass -File .\scripts\chat-agent.ps1 -CustomerId "C002"
+Launching Interactive WhatsApp Customer Support Chat Session...
+
+=================================================================
+      [ WhatsApp Customer Support - OmniResolve AI ]
+=================================================================
+ Connected Customer ID : C002
+ Active Channel        : WHATSAPP
+ Session Thread ID     : wa_thread_fa2cd1
+-----------------------------------------------------------------
+ Instructions:
+  - Type your message to start chatting.
+  - Perform basic troubleshooting when guided.
+  - Reply 'issue persists' or 'didn't work' if troubleshooting fails.
+  - Type 'exit' or 'quit' to end session.
+=================================================================
+
+
+[Customer (C002)] > Hi, could you please tell me which product I am using?
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C002) -[:SENT]-> Message(MSG-B07534) [sent_to: A003]
+Received notification from DBMS server: <GqlStatusObject gql_status='01G11', status_description='warn: null value eliminated in set function', position=None, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'_classification': 'UNRECOGNIZED', '_severity': 'WARNING', 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}> for query: "\n                MATCH (c:Customer {id: $cid})\n                OPTIONAL MATCH (c)-[:SENT]->(m:Message)-[:ASSOCIATED]->(t1:Ticket)\n                OPTIONAL MATCH (c)-[:HAS_TICKET]->(t2:Ticket)\n                WITH collect(DISTINCT t1) + collect(DISTINCT t2) AS all_tickets\n                UNWIND (CASE WHEN size(all_tickets) > 0 THEN all_tickets ELSE [null] END) AS t\n                WITH t WHERE t IS NOT NULL\n                RETURN t.id AS id, t.status AS status, coalesce(t.problem_description, t.problem_des, '') AS desc\n                "
+Neo4j Persisted Agent Response: LLMAgent(A003) -[:SENT]-> Message(MSG-RESP-344C21) [sent_to: C002]
+Neo4j Sequence Linked: Message(MSG-B07534) <==[NEXT / PRE]==> Message(MSG-RESP-344C21)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 1)]
+-----------------------------------------------------------------
+Hi Riya! 👋
+
+You are currently subscribed to the following product:
+
+- **Internet Leased Line (ILL)** – Product ID: P002
+
+I also noticed you have an **Open ticket (T002)** regarding high packet loss on your leased line. Would you like me to check the status of that ticket or help you with anything else today?
+
+[Customer (C002)] > I have problem with my Leased Line, speed is significantly slow.
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C002) -[:SENT]-> Message(MSG-599079) [sent_to: A003]
+Neo4j Sequence Linked: Message(MSG-RESP-344C21) <==[NEXT / PRE]==> Message(MSG-599079)
+Neo4j Persisted Complaint: Complaint(CMP-0135F1) -[:YES]-> Message(MSG-599079)
+Neo4j Persisted Agent Response: LLMAgent(A003) -[:SENT]-> Message(MSG-RESP-896F1E) [sent_to: C002]
+Neo4j Sequence Linked: Message(MSG-599079) <==[NEXT / PRE]==> Message(MSG-RESP-896F1E)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 2)]
+ Focus Product: P002
+-----------------------------------------------------------------
+Thanks for letting me know, Riya. Slow speeds on a Leased Line can be caused by a few things, so let's run through some quick diagnostic steps to isolate the issue. Could you please try the following on your Customer Edge (CE) router?
+
+1. **Check Interface Errors**
+   - Look at the SFP interface error counters on your CE router.
+   - *What to look for*: There should be **zero CRC errors** and **zero input/output frame drops**. Any errors here can indicate a physical/optical issue.
+
+2. **Run a Path Trace (MTR/Ping) to the Gateway**
+   - From the CE router, run: `ping -c 100 <gateway_ip>` (your carrier edge gateway IP).
+   - *What to look for*: **0% packet loss** to the carrier edge gateway. Significant loss or high jitter here points to a network-side issue.
+
+3. **Verify Link Utilization**
+   - Check the router's interface bandwidth utilization graph.
+   - *What to look for*: Traffic should be **below 95% of your contracted CIR** (Committed Information Rate). If you're consistently hitting or exceeding your CIR, the slowdown is expected due to committed rate limits.
+
+**A quick note on SLA:** Your ILL guarantees **< 0.5% packet loss** and **< 20ms round-trip latency** to the regional core router, so anything beyond that is worth investigating.
+
+Could you let me know what you find from these steps? Specifically:
+- Are there any CRC errors or frame drops on the interface?
+- What packet loss % are you seeing to the gateway?
+- Is your utilization near or above your contracted CIR?
+
+Once I have those details, I can help determine whether this is a local configuration issue or something that needs to be escalated to our network engineering team. 🙂
+
+[Customer (C002)] > There is 1% packet loss and latency is also high
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C002) -[:SENT]-> Message(MSG-40C5ED) [sent_to: A003]
+Neo4j Sequence Linked: Message(MSG-RESP-896F1E) <==[NEXT / PRE]==> Message(MSG-40C5ED)
+Neo4j Persisted Complaint: Complaint(CMP-4A2106) -[:YES]-> Message(MSG-40C5ED)
+Neo4j Persisted Agent Response: LLMAgent(A003) -[:SENT]-> Message(MSG-RESP-3D43C3) [sent_to: C002]
+Neo4j Sequence Linked: Message(MSG-40C5ED) <==[NEXT / PRE]==> Message(MSG-RESP-3D43C3)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 3)]
+ Focus Product: P002
+-----------------------------------------------------------------
+Thanks for checking, Riya. That's helpful — **1% packet loss is above your SLA guarantee of < 0.5%**, and combined with high latency, this confirms a genuine performance degradation on the line rather than normal usage.
+
+Before I escalate this, could you quickly confirm two more things so we can pinpoint the cause?
+
+1. **Interface Errors:** Did you see any **CRC errors or frame drops** on the SFP interface counters? (This helps us rule out a physical/optical issue on your end.)
+
+2. **Where is the loss occurring?** When you ran the ping/MTR to the gateway, was the 1% loss happening:
+   - **At the first hop** (your local CE router / carrier edge gateway), or
+   - **At a deeper carrier hop** (hop 2/3 or beyond)?
+
+**Why this matters:**
+- If the loss is at the **first hop** or you're seeing **CRC errors**, it may point to a local interface or SFP transceiver issue.
+- If the loss originates at **carrier hop 2/3** (or if your SFP optical signal is below -20 dBm), that indicates a **carrier-side network problem** that needs to be escalated to our Carrier NOC / Tier-3 engineering team.
+
+Once you share those details, I'll be able to raise the appropriate escalation for you. 🙂
+
+[Customer (C002)] > I don't see any CRC errors, I don't know about the second question
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C002) -[:SENT]-> Message(MSG-1172D7) [sent_to: A003]
+Neo4j Sequence Linked: Message(MSG-RESP-3D43C3) <==[NEXT / PRE]==> Message(MSG-1172D7)
+Neo4j Ticket Persisted: Ticket(TCK-B4CF7B) -[:RAISES]-> Agent(A003) & Customer(C002)
+Neo4j Persisted Agent Response: LLMAgent(A003) -[:SENT]-> Message(MSG-RESP-128C5F) [sent_to: C002]
+Neo4j Sequence Linked: Message(MSG-1172D7) <==[NEXT / PRE]==> Message(MSG-RESP-128C5F)
+Neo4j Ticket Linked: Agent(A003) -[:RAISE]-> Ticket(TCK-B4CF7B) & Message(MSG-1172D7) -[:ASSOCIATED]-> Ticket(TCK-B4CF7B)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 4)]
+ Focus Product: P002
+-----------------------------------------------------------------
+Done, Riya! I've raised a formal support ticket and escalated it for you. Here are the details:
+
+🎫 **Ticket ID:** TCK-B4CF7B
+📊 **Status:** Escalated to Tier-2
+⚡ **Priority:** High
+
+**Summary of what was reported:**
+- Slow speeds on your Internet Leased Line (P002)
+- 1% packet loss (above your < 0.5% SLA) and high latency (above < 20ms SLA)
+- Local interface confirmed healthy (no CRC errors), so the issue is suspected to be on the carrier network side
+
+Your case has been flagged for **senior network engineering / Carrier NOC** review. An engineer will follow up with you shortly to investigate the carrier-side path and restore your line to SLA performance.
+
+In the meantime, if the slowdown gets significantly worse or you experience a full outage, please let me know right away so we can bump the priority. Is there anything else I can help you with today? 🙂
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : TCK-B4CF7B
+  Status    : Escalated to Tier-2
+  Priority  : High
+*****************************************************************
+
+[Customer (C002)] > Thank you
+
+  ... [OmniResolve AI Support Agent is typing...] ...
+Neo4j Persisted Incoming Whatsapp: Customer(C002) -[:SENT]-> Message(MSG-0979EE) [sent_to: A003]
+Neo4j Sequence Linked: Message(MSG-RESP-128C5F) <==[NEXT / PRE]==> Message(MSG-0979EE)
+Neo4j Persisted Agent Response: LLMAgent(A003) -[:SENT]-> Message(MSG-RESP-5CE4E1) [sent_to: C002]
+Neo4j Sequence Linked: Message(MSG-0979EE) <==[NEXT / PRE]==> Message(MSG-RESP-5CE4E1)
+Neo4j Ticket Linked: Agent(A003) -[:RAISE]-> Ticket(TCK-B4CF7B) & Message(MSG-0979EE) -[:ASSOCIATED]-> Ticket(TCK-B4CF7B)
+
+-----------------------------------------------------------------
+[OmniResolve AI Support Agent (Turn 5)]
+ Focus Product: P002
+-----------------------------------------------------------------
+You're very welcome, Riya! 😊
+
+I'm glad I could help. Just to recap, your ticket **TCK-B4CF7B** is now escalated to Tier-2 with High priority, and our engineering team will be in touch soon regarding the packet loss and latency on your Leased Line.
+
+If you need anything else or want to check on the ticket's progress later, just reach out here. Have a great day! 👋
+
+*****************************************************************
+ [SYSTEM EVENT: SUPPORT TICKET CREATED IN NEO4J GRAPH]
+  Ticket ID : TCK-B4CF7B
+  Status    : Escalated to Tier-2
+  Priority  : High
+*****************************************************************
+
+[Customer (C002)] >
