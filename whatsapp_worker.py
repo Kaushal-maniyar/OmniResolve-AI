@@ -8,7 +8,9 @@ import boto3
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from groq import Groq
+from neo4j import GraphDatabase
 from c360.agent.workflow import run_agent_graph
+from c360.onboarding.profile import get_or_create_customer, capture_explicit_profile_details
 
 
 # ============================================================
@@ -17,15 +19,49 @@ from c360.agent.workflow import run_agent_graph
 
 load_dotenv()
 
-# Test-only: explicitly associate one WhatsApp sender
-# with an existing fictional Neo4j customer.
-TEST_WHATSAPP_NUMBER = os.getenv("TEST_WHATSAPP_NUMBER", "").lstrip("+")
-TEST_CUSTOMER_ID = os.getenv("TEST_CUSTOMER_ID", "")
+# Demo-only: WhatsApp sender numbers are mapped to fictional customer records
+# in Neo4j. Do not treat this lookup as production identity verification.
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 
-if TEST_WHATSAPP_NUMBER and not TEST_CUSTOMER_ID:
-    raise RuntimeError(
-        "TEST_CUSTOMER_ID is required when TEST_WHATSAPP_NUMBER is set."
-    )
+if not NEO4J_PASSWORD:
+    raise RuntimeError("NEO4J_PASSWORD is missing from .env")
+
+neo4j_driver = GraphDatabase.driver(
+    NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)
+)
+
+
+def normalize_phone(number):
+    """Canonical WhatsApp number: country code and digits, without '+'."""
+    return "".join(char for char in str(number or "") if char.isdigit())
+
+
+def find_demo_customer_id(sender):
+    """Look up a fictional demo customer by phone; fail closed on errors."""
+    phone = normalize_phone(sender)
+    if not phone:
+        return None
+
+    with neo4j_driver.session(database=NEO4J_DATABASE) as session:
+        records = list(session.run(
+            """
+            MATCH (c:Customer)
+            WHERE c.phone = $phone OR c.phone = $plus_phone
+            RETURN c.id AS customer_id, c.onboarding_status AS status
+            LIMIT 2
+            """,
+            phone=phone,
+            plus_phone="+" + phone,
+        ))
+
+    if len(records) > 1:
+        logger.error("Multiple demo customers share a WhatsApp phone number")
+        return None
+    return (records[0]["customer_id"], records[0]["status"]) if records else None
+
 
 AWS_PROFILE = "omniresolve-dev"
 AWS_REGION = "eu-north-1"
@@ -170,77 +206,34 @@ processed_message_ids = set()
 # ============================================================
 def generate_ai_response(sender, user_message):
 
-    normalized_sender = sender.lstrip("+")
+    normalized_sender = normalize_phone(sender)
 
-    # Route only the explicitly configured test sender
-    # to the customer-specific LangGraph workflow.
-    if (
-        TEST_WHATSAPP_NUMBER
-        and normalized_sender == TEST_WHATSAPP_NUMBER
-    ):
-        logger.info(
-            "Routing authorized test session to LangGraph | customer=%s",
-            TEST_CUSTOMER_ID
+    # Every sender gets a minimal profile and the same LangGraph support path.
+    # No registration questionnaire, verification gate, or product requirement.
+    try:
+        customer_id = get_or_create_customer(
+            neo4j_driver, NEO4J_DATABASE, normalized_sender
         )
-
-        result = run_agent_graph(
-            message_content=user_message,
-            customer_id=TEST_CUSTOMER_ID,
-            channel="whatsapp",
-            thread_id=f"whatsapp_{normalized_sender}"
+        capture_explicit_profile_details(
+            neo4j_driver, NEO4J_DATABASE, customer_id, user_message
         )
+    except Exception:
+        logger.exception("Neo4j profile resolution failed")
+        # Do not route to customer-specific tools when the database is unavailable.
+        return "Customer support is temporarily unavailable. Please try again shortly."
 
-        reply = result.get("final_response")
-
-        if not isinstance(reply, str) or not reply.strip():
-            raise RuntimeError(
-                "LangGraph returned an empty final_response."
-            )
-
-        return reply.strip()
-
-    # All other senders retain the existing general-support chatbot.
-    history = list(conversations[sender])
-
-    messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT
-        }
-    ]
-
-    messages.extend(history)
-
-    messages.append({
-        "role": "user",
-        "content": user_message
-    })
-
-    logger.info("Generating general-support response...")
-
-    completion = groq_client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        temperature=0.5,
-        max_tokens=500
+    logger.info(
+        "Routing WhatsApp customer to LangGraph | customer=%s", customer_id)
+    result = run_agent_graph(
+        message_content=user_message,
+        customer_id=customer_id,
+        channel="whatsapp",
+        thread_id=f"whatsapp_{normalized_sender}"
     )
-
-    reply = completion.choices[0].message.content
-
-    if not reply:
-        raise RuntimeError("Groq returned an empty response.")
-
-    conversations[sender].append({
-        "role": "user",
-        "content": user_message
-    })
-
-    conversations[sender].append({
-        "role": "assistant",
-        "content": reply
-    })
-
-    return reply
+    reply = result.get("final_response")
+    if not isinstance(reply, str) or not reply.strip():
+        raise RuntimeError("LangGraph returned an empty final_response.")
+    return reply.strip()
 
 # ============================================================
 # 8. SEND WHATSAPP MESSAGE
