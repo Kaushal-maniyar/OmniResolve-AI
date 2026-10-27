@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from neo4j import GraphDatabase
 from c360.agent.workflow import run_agent_graph
-from c360.onboarding.profile import get_or_create_customer, capture_explicit_profile_details
+from c360.onboarding.registration import handle_onboarding
 
 
 # ============================================================
@@ -205,35 +205,30 @@ processed_message_ids = set()
 # 7. GENERATE AI RESPONSE
 # ============================================================
 def generate_ai_response(sender, user_message):
-
-    normalized_sender = normalize_phone(sender)
-
-    # Every sender gets a minimal profile and the same LangGraph support path.
-    # No registration questionnaire, verification gate, or product requirement.
+    """Require short demo registration for unknown WhatsApp numbers."""
+    phone = normalize_phone(sender)
+    if not phone:
+        raise ValueError("Missing WhatsApp sender number")
     try:
-        customer_id = get_or_create_customer(
-            neo4j_driver, NEO4J_DATABASE, normalized_sender
+        customer_record = find_demo_customer_id(sender)
+        if not customer_record:
+            return handle_onboarding(neo4j_driver, NEO4J_DATABASE, phone, user_message)
+        customer_id, _status = customer_record
+        # Registration is for demo identity only; it does not verify ownership.
+        # Support and ticket creation are available after registration.
+        result = run_agent_graph(
+            message_content=user_message,
+            customer_id=customer_id,
+            channel="whatsapp",
+            thread_id=f"whatsapp_{phone}",
         )
-        capture_explicit_profile_details(
-            neo4j_driver, NEO4J_DATABASE, customer_id, user_message
-        )
+        reply = result.get("final_response")
+        if not isinstance(reply, str) or not reply.strip():
+            raise RuntimeError("LangGraph returned an empty response")
+        return reply.strip()
     except Exception:
-        logger.exception("Neo4j profile resolution failed")
-        # Do not route to customer-specific tools when the database is unavailable.
-        return "Customer support is temporarily unavailable. Please try again shortly."
-
-    logger.info(
-        "Routing WhatsApp customer to LangGraph | customer=%s", customer_id)
-    result = run_agent_graph(
-        message_content=user_message,
-        customer_id=customer_id,
-        channel="whatsapp",
-        thread_id=f"whatsapp_{normalized_sender}"
-    )
-    reply = result.get("final_response")
-    if not isinstance(reply, str) or not reply.strip():
-        raise RuntimeError("LangGraph returned an empty final_response.")
-    return reply.strip()
+        logger.exception("Customer support processing failed")
+        return "Sorry, customer support is temporarily unavailable. Please try again."
 
 # ============================================================
 # 8. SEND WHATSAPP MESSAGE
