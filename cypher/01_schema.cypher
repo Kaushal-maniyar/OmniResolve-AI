@@ -7,6 +7,7 @@ CREATE CONSTRAINT image_id_unique      IF NOT EXISTS FOR (n:Image)     REQUIRE n
 CREATE CONSTRAINT video_id_unique      IF NOT EXISTS FOR (n:Video)     REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT agent_id_unique      IF NOT EXISTS FOR (n:Agent)     REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT ticket_id_unique     IF NOT EXISTS FOR (n:Ticket)    REQUIRE n.id IS UNIQUE;
+CREATE CONSTRAINT customer_phone_unique IF NOT EXISTS FOR (n:Customer) REQUIRE n.phone IS UNIQUE;
 
 CREATE INDEX customer_email IF NOT EXISTS FOR (n:Customer) ON (n.email);
 CREATE INDEX message_date   IF NOT EXISTS FOR (n:Message)  ON (n.date);
