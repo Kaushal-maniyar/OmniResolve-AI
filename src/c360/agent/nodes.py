@@ -5,7 +5,7 @@ from typing import Dict, Any, List
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from c360.config import settings
 from c360.agent.state import AgentState
-from c360.agent.client import get_chat_model, VLLMClient
+from c360.agent.client import get_chat_model, create_provider_model
 from c360.agent.prompts import get_system_prompt
 from c360.graph.ingestion import ingest_customer_message, ingest_agent_response
 from c360.agent.tools import (
@@ -25,14 +25,32 @@ AGENT_TOOLS = [
 # Initialize tool-bound ChatOpenAI model
 chat_model = get_chat_model().bind_tools(AGENT_TOOLS)
 
+fallback_model = None
+
+if settings.llm_fallback_provider != "none":
+    if settings.llm_fallback_provider != settings.llm_provider:
+        fallback_model = create_provider_model(
+            settings.llm_fallback_provider,
+            timeout=30.0
+        ).bind_tools(AGENT_TOOLS)
+
+
 def add_msg_to_neo4j_node(state: AgentState) -> Dict[str, Any]:
     """Node 1: Ingest incoming Customer Message or Email using Message Ingestion Pipeline."""
     msg_content = state.get("message_content", "")
-    customer_id = state.get("customer_id") or "C001"
+
+    customer_id = state.get("customer_id")
+
+    if not customer_id:
+        raise ValueError(
+            "Cannot process customer-specific messages without a customer ID."
+        )
+
     channel = state.get("channel", "whatsapp")
     customer_email = state.get("customer_email")
     attachments = state.get("attachments")
-    prev_msg_id = state.get("response_message_id") or state.get("prev_message_id")
+    prev_msg_id = state.get(
+        "response_message_id") or state.get("prev_message_id")
 
     # Ingest incoming message into Neo4j graph via Message Ingestion Pipeline
     ingest_res = ingest_customer_message(
@@ -72,28 +90,36 @@ def add_msg_to_neo4j_node(state: AgentState) -> Dict[str, Any]:
         "messages": new_messages
     }
 
+
 def llm_node(state: AgentState) -> Dict[str, Any]:
-    """Node 2: Execute ReAct LLM Reasoning & Function Calling."""
+    """Execute agent reasoning using the configured LLM provider."""
+
     messages = state.get("messages", [])
 
     try:
         response = chat_model.invoke(messages)
         return {"messages": [response]}
-    except Exception as e:
-        print(f"Notice: Chat model invocation error ({e}). Generating fallback response.")
-        # Fallback via VLLMClient
-        simple_msgs = []
-        for m in messages:
-            if isinstance(m, SystemMessage):
-                simple_msgs.append({"role": "system", "content": str(m.content)})
-            elif isinstance(m, HumanMessage):
-                simple_msgs.append({"role": "user", "content": str(m.content)})
-            elif isinstance(m, AIMessage):
-                simple_msgs.append({"role": "assistant", "content": str(m.content)})
 
-        vllm = VLLMClient()
-        out = vllm.generate(messages=simple_msgs)
-        return {"messages": [AIMessage(content=out.get("content", ""))]}
+    except Exception as primary_error:
+        print(
+            f"Primary LLM ({settings.llm_provider}) failed: "
+            f"{primary_error}"
+        )
+
+        if fallback_model is None:
+            raise RuntimeError(
+                f"LLM provider '{settings.llm_provider}' is unavailable."
+            ) from primary_error
+
+        try:
+            response = fallback_model.invoke(messages)
+            return {"messages": [response]}
+
+        except Exception as fallback_error:
+            raise RuntimeError(
+                "Both primary and fallback LLM providers failed."
+            ) from fallback_error
+
 
 def send_respone_node(state: AgentState) -> Dict[str, Any]:
     """Node 3: Ingest Agent Response using Message Ingestion Pipeline & Output Final Result."""
@@ -105,33 +131,49 @@ def send_respone_node(state: AgentState) -> Dict[str, Any]:
             break
 
     # Scan for any tickets created or knowledge retrieved during this session
-    ticket_created = state.get("ticket_created")
-    needs_escalation = state.get("needs_escalation", False)
+    ticket_created = None
+    needs_escalation = False
     product_id = state.get("product_id")
 
     for m in messages:
         if isinstance(m, ToolMessage):
             # Check for generate_ticket
-            if getattr(m, "name", "") == "generate_ticket" or "TCK-" in str(m.content):
+            if getattr(m, "name", "") == "generate_ticket":
                 try:
-                    data = json.loads(m.content) if isinstance(m.content, str) else m.content
-                    if isinstance(data, dict) and "id" in data:
+                    data = json.loads(m.content) if isinstance(
+                        m.content, str) else m.content
+
+                    if (
+                        isinstance(data, dict)
+                        and data.get("success") is True
+                        and isinstance(data.get("id"), str)
+                        and data["id"].startswith("TCK-")
+                    ):
                         ticket_created = data
                         needs_escalation = True
-                except Exception:
+
+                except (json.JSONDecodeError, TypeError):
                     pass
-            # Check for product filter in KB retrieve
+
+          # Check for product filter in KB retrieve
             if getattr(m, "name", "") == "retrive_data_from_knowledgebase":
                 try:
-                    kb_data = json.loads(m.content) if isinstance(m.content, str) else m.content
+                    kb_data = json.loads(m.content) if isinstance(
+                        m.content, str) else m.content
                     if isinstance(kb_data, dict):
-                        detected = kb_data.get("applied_filters", {}).get("product") or kb_data.get("product_context", {}).get("product_id")
+                        detected = kb_data.get("applied_filters", {}).get(
+                            "product") or kb_data.get("product_context", {}).get("product_id")
                         if detected:
                             product_id = detected
                 except Exception:
                     pass
 
-    customer_id = state.get("customer_id") or "C001"
+    customer_id = state.get("customer_id")
+
+    if not customer_id:
+        raise ValueError(
+            "Cannot process customer-specific messages without a customer ID."
+        )
     incoming_msg_id = state.get("message_id")
     ticket_id = ticket_created.get("id") if ticket_created else None
 

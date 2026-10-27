@@ -5,6 +5,7 @@ from langchain_core.tools import tool
 from c360.config import settings
 from c360.knowledge.retriever import retriever
 
+
 @tool
 def retrive_data_from_Neo4j(customer_id: Optional[str] = "", customer_email: Optional[str] = "") -> Dict[str, Any]:
     """Retrieve Customer 360 profile, active owned products, tickets, and complaints from Neo4j Graph Database."""
@@ -12,8 +13,12 @@ def retrive_data_from_Neo4j(customer_id: Optional[str] = "", customer_email: Opt
     cem = customer_email or ""
 
     if not cid and not cem:
-        # Fallback to C001 for demo testing if customer info omitted
-        cid = "C001"
+        return {
+            "error": "Customer ID or email is required.",
+            "owned_products": [],
+            "tickets": [],
+            "complaints": []
+        }
 
     driver = settings.get_driver()
     profile = {
@@ -45,7 +50,8 @@ def retrive_data_from_Neo4j(customer_id: Optional[str] = "", customer_email: Opt
                     "MATCH (c:Customer {id: $cid})-[:OWNS]->(p:Product) RETURN p.id AS id, p.name AS name",
                     cid=res["id"]
                 ).data()
-                profile["owned_products"] = [f"{p['name']} ({p['id']})" for p in prod_res]
+                profile["owned_products"] = [
+                    f"{p['name']} ({p['id']})" for p in prod_res]
 
                 # Fetch Tickets (associated via message or linked directly to customer)
                 tkt_query = """
@@ -69,11 +75,13 @@ def retrive_data_from_Neo4j(customer_id: Optional[str] = "", customer_email: Opt
                 profile["complaints"] = cmp_res
 
     except Exception as e:
-        print(f"Notice: Neo4j profile lookup skipped ({e}). Returning fallback profile.")
+        print(
+            f"Notice: Neo4j profile lookup skipped ({e}). Returning fallback profile.")
     finally:
         driver.close()
 
     return profile
+
 
 @tool
 def retrive_data_from_knowledgebase(query: str, product_id: Optional[str] = "", top_k: int = 15) -> Dict[str, Any]:
@@ -81,12 +89,16 @@ def retrive_data_from_knowledgebase(query: str, product_id: Optional[str] = "", 
     pid = product_id or None
     return retriever.retrieve(query, product_id=pid, top_k=top_k)
 
+
 @tool
 def retrive_images_or_video(message_id: Optional[str] = "", customer_id: Optional[str] = "") -> List[Dict[str, Any]]:
     """Retrieve image or video attachment metadata linked to customer messages from Neo4j Graph Database."""
     attachments = []
     mid = message_id or ""
-    cid = customer_id or "C001"
+    cid = customer_id or ""
+
+    if not mid and not cid:
+        return []
 
     driver = settings.get_driver()
     try:
@@ -111,20 +123,32 @@ def retrive_images_or_video(message_id: Optional[str] = "", customer_id: Optiona
 
     return attachments
 
+
 @tool
 def generate_ticket(
     problem_description: str,
-    customer_id: Optional[str] = "C001",
+    customer_id: Optional[str] = None,
     agent_id: Optional[str] = "A003",
     priority: Optional[str] = "High"
 ) -> Dict[str, Any]:
-    """Create and persist a new formal Support Ticket node in Neo4j Graph Database."""
-    cid = customer_id or "C001"
+    """Create a support ticket in Neo4j and confirm only after successful persistence."""
+
+    cid = customer_id
+
+    if not cid:
+        return {
+            "success": False,
+            "id": None,
+            "error": "Customer ID is required.",
+            "message": "Cannot create a ticket without a customer ID."
+        }
+
     aid = agent_id or "A003"
     prio = priority or "High"
 
-    ticket_id = f"TCK-{str(uuid.uuid4())[:6].upper()}"
-    now_str = datetime.datetime.now().isoformat()
+    ticket_id = f"TCK-{uuid.uuid4().hex[:12].upper()}"
+    now_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
     ticket_data = {
         "id": ticket_id,
         "status": "Escalated to Tier-2",
@@ -133,25 +157,78 @@ def generate_ticket(
         "created_at": now_str
     }
 
+    def create_ticket_transaction(tx):
+        query = """
+        MATCH (c:Customer {id: $cid})
+        MATCH (a:Agent {id: $aid})
+
+        CREATE (t:Ticket {
+            id: $tid,
+            status: $status,
+            priority: $priority,
+            problem_description: $desc,
+            created_at: $created_at
+        })
+
+        SET a:LLMAgent
+
+        MERGE (a)-[:RAISE]->(t)
+        MERGE (c)-[:HAS_TICKET]->(t)
+
+        RETURN
+            t.id AS id,
+            c.id AS customer_id,
+            a.id AS agent_id
+        """
+
+        result = tx.run(
+            query,
+            cid=cid,
+            aid=aid,
+            tid=ticket_id,
+            status=ticket_data["status"],
+            priority=prio,
+            desc=problem_description,
+            created_at=now_str
+        )
+
+        record = result.single(strict=True)
+
+        return dict(record) if record else None
+
     driver = settings.get_driver()
+
     try:
         with driver.session(database=settings.database) as session:
-            cypher = """
-            MERGE (t:Ticket {id: $tid})
-            SET t.status = $status, t.problem_description = $desc, t.created_at = $created_at
-            WITH t
-            MATCH (a:Agent {id: $aid})
-            SET a:LLMAgent
-            MERGE (a)-[:RAISE {date: $created_at}]->(t)
-            WITH t
-            MATCH (c:Customer {id: $cid})
-            MERGE (c)-[:HAS_TICKET]->(t)
-            """
-            session.run(cypher, tid=ticket_id, status=ticket_data["status"], desc=problem_description, created_at=now_str, aid=aid, cid=cid)
-            print(f"Neo4j Ticket Persisted: Ticket({ticket_id}) -[:RAISES]-> Agent({aid}) & Customer({cid})")
+            persisted = session.execute_write(create_ticket_transaction)
+
+        if not persisted:
+            raise RuntimeError(
+                f"Ticket creation failed: customer {cid} "
+                f"or agent {aid} was not found."
+            )
+
+        print(f"Neo4j Ticket Persisted: {ticket_id}")
+
+        return {
+            "success": True,
+            **ticket_data,
+            "customer_id": persisted["customer_id"],
+            "agent_id": persisted["agent_id"]
+        }
+
     except Exception as e:
-        print(f"Notice: Neo4j ticket node creation skipped ({e}). Local ticket confirmation generated.")
+        print(f"Neo4j Ticket Creation Failed: {e}")
+
+        return {
+            "success": False,
+            "id": None,
+            "error": str(e),
+            "message": (
+                "The support ticket could not be created. "
+                "Do not tell the customer that a ticket was raised."
+            )
+        }
+
     finally:
         driver.close()
-
-    return ticket_data
