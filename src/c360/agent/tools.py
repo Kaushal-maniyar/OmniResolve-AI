@@ -11,26 +11,27 @@ from langchain_core.tools import tool
 
 
 @tool
-def check_network_outage(zip_code: str) -> dict:
+def check_network_outage(pin_code: str) -> dict:
     """
-    Check for a simulated network outage using a 5-digit US ZIP code.
+    Check for a simulated network outage using a 6-digit Indian PIN code.
 
     Args:
-        zip_code: A 5-digit US ZIP code.
+        pin_code: A 6-digit Indian postal PIN code.
     """
 
-    zip_code = str(zip_code).strip()
+    pin_code = str(pin_code).strip()
 
-    if not re.fullmatch(r"\d{5}", zip_code):
+    if not re.fullmatch(r"[1-9]\d{5}", pin_code):
         return {
-            "status": "INVALID_ZIP_CODE",
-            "message": "Please provide a valid 5-digit US ZIP code.",
+            "status": "INVALID_PIN_CODE",
+            "message": "Please provide a valid 6-digit Indian PIN code.",
         }
 
-    outage_detected = random.choice([True, False])
+    # Consistent simulated outage status for each PIN code
+    outage_detected = int(pin_code) % 2 == 0
 
     return {
-        "zip_code": zip_code,
+        "pin_code": pin_code,
         "status": "ACTIVE_OUTAGE" if outage_detected else "NO_REPORTED_OUTAGE",
         "outage_detected": outage_detected,
         "technicians_working": outage_detected,
