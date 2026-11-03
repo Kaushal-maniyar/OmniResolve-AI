@@ -12,14 +12,16 @@ from c360.agent.tools import (
     retrive_data_from_Neo4j,
     retrive_data_from_knowledgebase,
     retrive_images_or_video,
-    generate_ticket
+    generate_ticket,
+    check_network_outage
 )
 
 AGENT_TOOLS = [
     retrive_data_from_Neo4j,
     retrive_data_from_knowledgebase,
     retrive_images_or_video,
-    generate_ticket
+    generate_ticket,
+    check_network_outage
 ]
 
 # Initialize tool-bound ChatOpenAI model
@@ -36,23 +38,41 @@ if settings.llm_fallback_provider != "none":
 
 
 def add_msg_to_neo4j_node(state: AgentState) -> Dict[str, Any]:
-    """Node 1: Ingest incoming Customer Message or Email using Message Ingestion Pipeline."""
+
     msg_content = state.get("message_content", "")
-
     customer_id = state.get("customer_id")
-
-    if not customer_id:
-        raise ValueError(
-            "Cannot process customer-specific messages without a customer ID."
-        )
-
     channel = state.get("channel", "whatsapp")
     customer_email = state.get("customer_email")
-    attachments = state.get("attachments")
-    prev_msg_id = state.get(
-        "response_message_id") or state.get("prev_message_id")
 
-    # Ingest incoming message into Neo4j graph via Message Ingestion Pipeline
+    # Guest customer: do not write to Neo4j
+    if not customer_id:
+
+        system_prompt_text = get_system_prompt(
+            customer_id=None,
+            channel=channel
+        )
+
+        return {
+            "message_id": None,
+            "customer_id": None,
+            "customer_email": None,
+            "channel": channel,
+            "messages": [
+                SystemMessage(
+                    content=system_prompt_text,
+                    id="system_instruction"
+                ),
+                HumanMessage(content=msg_content)
+            ]
+        }
+
+    # Registered customer: existing behavior
+    attachments = state.get("attachments")
+    prev_msg_id = (
+        state.get("response_message_id")
+        or state.get("prev_message_id")
+    )
+
     ingest_res = ingest_customer_message(
         customer_id=customer_id,
         content=msg_content,
@@ -61,33 +81,28 @@ def add_msg_to_neo4j_node(state: AgentState) -> Dict[str, Any]:
         prev_message_id=prev_msg_id,
         agent_id="A003"
     )
-    msg_id = ingest_res["message_id"]
-    is_complaint = ingest_res["is_complaint"]
-    complaint_id = ingest_res["complaint_id"]
 
-    # Build messages list: Ensure system prompt carries authenticated session context
     system_prompt_text = get_system_prompt(
         customer_id=customer_id,
         channel=channel,
         customer_email=customer_email
     )
 
-    new_messages = [
-        SystemMessage(content=system_prompt_text, id="system_instruction")
-    ]
-
-    if msg_content:
-        new_messages.append(HumanMessage(content=msg_content))
-
     return {
-        "message_id": msg_id,
+        "message_id": ingest_res["message_id"],
         "prev_message_id": prev_msg_id,
-        "is_complaint": is_complaint,
-        "complaint_id": complaint_id,
+        "is_complaint": ingest_res["is_complaint"],
+        "complaint_id": ingest_res["complaint_id"],
         "customer_id": customer_id,
         "customer_email": customer_email,
         "channel": channel,
-        "messages": new_messages
+        "messages": [
+            SystemMessage(
+                content=system_prompt_text,
+                id="system_instruction"
+            ),
+            HumanMessage(content=msg_content)
+        ]
     }
 
 
@@ -171,9 +186,14 @@ def send_respone_node(state: AgentState) -> Dict[str, Any]:
     customer_id = state.get("customer_id")
 
     if not customer_id:
-        raise ValueError(
-            "Cannot process customer-specific messages without a customer ID."
-        )
+        return {
+            "final_response": final_text,
+            "response_message_id": None,
+            "ticket_created": None,
+            "needs_escalation": False,
+            "product_id": product_id
+        }
+
     incoming_msg_id = state.get("message_id")
     ticket_id = ticket_created.get("id") if ticket_created else None
 

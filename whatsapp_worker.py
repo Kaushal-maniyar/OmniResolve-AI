@@ -205,31 +205,52 @@ processed_message_ids = set()
 # 7. GENERATE AI RESPONSE
 # ============================================================
 def generate_ai_response(sender, user_message):
-    """Require short demo registration for unknown WhatsApp numbers."""
+    """Support-first routing for registered and guest customers."""
+
     phone = normalize_phone(sender)
+
     if not phone:
         raise ValueError("Missing WhatsApp sender number")
+
     try:
         customer_record = find_demo_customer_id(sender)
-        if not customer_record:
-            return handle_onboarding(neo4j_driver, NEO4J_DATABASE, phone, user_message)
-        customer_id, _status = customer_record
-        # Registration is for demo identity only; it does not verify ownership.
-        # Support and ticket creation are available after registration.
+
+        if customer_record:
+            customer_id, _status = customer_record
+
+            logger.info(
+                "Registered customer found: %s",
+                customer_id
+            )
+
+        else:
+            customer_id = None
+
+            logger.info(
+                "Guest support session started"
+            )
+
         result = run_agent_graph(
             message_content=user_message,
             customer_id=customer_id,
             channel="whatsapp",
             thread_id=f"whatsapp_{phone}",
         )
+
         reply = result.get("final_response")
+
         if not isinstance(reply, str) or not reply.strip():
             raise RuntimeError("LangGraph returned an empty response")
+
         return reply.strip()
+
     except Exception:
         logger.exception("Customer support processing failed")
-        return "Sorry, customer support is temporarily unavailable. Please try again."
 
+        return (
+            "Sorry, customer support is temporarily unavailable. "
+            "Please try again."
+        )
 # ============================================================
 # 8. SEND WHATSAPP MESSAGE
 # ============================================================
