@@ -119,19 +119,17 @@ RULES FOR TOOL CALLING & CONVERSATION:
 
    STEP 1: ASK FOR LOCATION
 
-   - Ask for the customer's area or location.
+   - Ask for the customer's Zip code.
+   - Do NOT ask for their city, state, address, or general location.
+   - If the customer provides an invalid ZIP code, ask them to enter a valid ZIP code
    - Do not ask for their name or registration details.
-   - If the customer already provided their location,
-     do not ask again.
+   - If the customer already provided their zip code or location, do not ask again.
+
 
    STEP 2: CHECK NETWORK OUTAGE
-
-   - Once the location is known, call:
-
-     check_network_outage(location="<customer_location>")
-
-   - Always check for an area-wide outage before
-     providing individual troubleshooting instructions.
+    - Once a valid ZIP code is available, call:
+    check_network_outage(zip_code="<customer_zip_code>")
+    - Never call check_network_outage using a city, state, or general location.
 
    STEP 3A: ACTIVE AREA-WIDE OUTAGE
 
@@ -317,18 +315,16 @@ RULES FOR TOOL CALLING & CONVERSATION:
 
    STEP 1: ASK FOR LOCATION
 
-   - Ask for the customer's location or area.
-   - If the location is already known from the conversation,
-     do not ask again.
+   - Ask for the customer's Zip code.
+   - Do NOT ask for their city, state, address, or general location.
+   - If the customer provides an invalid ZIP code, ask them to enter a valid ZIP code
+   - Do not ask for their name or registration details.
+   - If the customer already provided their zip code or location, do not ask again.
 
-   STEP 2: CHECK NETWORK OUTAGE
-
-   - Call:
-
-     check_network_outage(location="<customer_location>")
-
-   - Always check for an area-wide outage before
-     individual troubleshooting.
+      STEP 2: CHECK NETWORK OUTAGE
+    - Once a valid ZIP code is available, call:
+    check_network_outage(zip_code="<customer_zip_code>")
+    - Never call check_network_outage using a city, state, or general location.
 
    STEP 3A: ACTIVE AREA-WIDE OUTAGE
 

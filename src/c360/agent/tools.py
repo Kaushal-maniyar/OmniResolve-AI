@@ -5,49 +5,36 @@ from langchain_core.tools import tool
 from c360.config import settings
 from c360.knowledge.retriever import retriever
 import random
+import re
+
+from langchain_core.tools import tool
 
 
 @tool
-def check_network_outage(location: str) -> Dict[str, Any]:
+def check_network_outage(zip_code: str) -> dict:
     """
-    Check whether a network outage is reported in a location.
+    Check for a simulated network outage using a 5-digit US ZIP code.
 
-    Currently simulates an external telecom monitoring API.
+    Args:
+        zip_code: A 5-digit US ZIP code.
     """
-    location = location.strip()
 
-    if not location:
+    zip_code = str(zip_code).strip()
+
+    if not re.fullmatch(r"\d{5}", zip_code):
         return {
-            "success": False,
-            "status": "UNKNOWN",
-            "message": "Customer location is required."
+            "status": "INVALID_ZIP_CODE",
+            "message": "Please provide a valid 5-digit US ZIP code.",
         }
 
-    # Simulate an external monitoring API
-    is_area_outage = random.choice([True, False])
-
-    if is_area_outage:
-        return {
-            "success": True,
-            "location": location,
-            "status": "ACTIVE_OUTAGE",
-            "technicians_working": True,
-            "source": "simulated_monitoring_api",
-            "message": (
-                f"A simulated network outage is affecting {location}. "
-                "The technical team is working on restoring connectivity."
-            )
-        }
+    outage_detected = random.choice([True, False])
 
     return {
-        "success": True,
-        "location": location,
-        "status": "NO_REPORTED_OUTAGE",
+        "zip_code": zip_code,
+        "status": "ACTIVE_OUTAGE" if outage_detected else "NO_REPORTED_OUTAGE",
+        "outage_detected": outage_detected,
+        "technicians_working": outage_detected,
         "source": "simulated_monitoring_api",
-        "message": (
-            f"No area-wide outage was reported in {location} "
-            "by the simulated monitoring service."
-        )
     }
 
 
