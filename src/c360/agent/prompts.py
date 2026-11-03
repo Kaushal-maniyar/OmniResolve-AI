@@ -120,6 +120,7 @@ RULES FOR TOOL CALLING & CONVERSATION:
    STEP 1: ASK FOR LOCATION
 
    - Ask for the customer's Zip code.
+   - Zip code will contain the 6 digit
    - Do NOT ask for their city, state, address, or general location.
    - If the customer provides an invalid ZIP code, ask them to enter a valid ZIP code
    - Do not ask for their name or registration details.
