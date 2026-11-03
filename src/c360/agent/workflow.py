@@ -22,9 +22,47 @@ def confirmed_tools_node(state: AgentState):
     messages = state.get("messages", [])
     last = messages[-1] if messages else None
     calls = getattr(last, "tool_calls", None) or []
+
+    # ========================================================
+    # GUEST CUSTOMER SECURITY CHECK
+    # ========================================================
+
+    customer_id = state.get("customer_id")
+
+    if not customer_id:
+
+        restricted_tools = {
+            "retrive_data_from_Neo4j",
+            "generate_ticket"
+        }
+
+        if any(
+            call.get("name") in restricted_tools
+            for call in calls
+        ):
+
+            return {
+                "messages": [
+                    ToolMessage(
+                        content=(
+                            "This action requires a registered "
+                            "customer profile. Continue providing "
+                            "general technical support without "
+                            "requiring registration. Only suggest "
+                            "registration when the customer needs "
+                            "account-specific assistance."
+                        ),
+                        tool_call_id=call["id"],
+                        name=call["name"]
+                    )
+                    for call in calls
+                ]
+            }
+
     if not any(c.get("name") == "generate_ticket" for c in calls):
         return _tool_node.invoke(state)
-    confirmed = (state.get("message_content") or "").strip().upper() == "CONFIRM TICKET"
+    confirmed = (state.get("message_content")
+                 or "").strip().upper() == "CONFIRM TICKET"
     if not confirmed:
         # Block the whole tool batch so a mixed call cannot create a ticket.
         return {"messages": [ToolMessage(
@@ -55,11 +93,14 @@ def create_customer_support_graph():
 CustomerSupportGraph = create_customer_support_graph()
 
 
-def run_agent_graph(message_content: str, customer_id: str,
-                    customer_email: str = None, channel: str = "whatsapp",
-                    thread_id: str = "default_session") -> dict:
-    if not customer_id or not customer_id.strip():
-        raise ValueError("A customer_id is required")
+def run_agent_graph(
+    message_content: str,
+    customer_id: str = None,
+    customer_email: str = None,
+    channel: str = "whatsapp",
+    thread_id: str = "default_session"
+) -> dict:
+
     initial_state = {
         "message_content": message_content,
         "customer_id": customer_id,
@@ -68,6 +109,12 @@ def run_agent_graph(message_content: str, customer_id: str,
         "needs_escalation": False,
         "ticket_created": None,
     }
+
     return CustomerSupportGraph.invoke(
-        initial_state, config={"configurable": {"thread_id": thread_id}}
+        initial_state,
+        config={
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
     )

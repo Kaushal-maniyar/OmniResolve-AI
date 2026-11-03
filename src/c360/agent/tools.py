@@ -4,6 +4,51 @@ from typing import Dict, Any, List, Optional
 from langchain_core.tools import tool
 from c360.config import settings
 from c360.knowledge.retriever import retriever
+import random
+
+
+@tool
+def check_network_outage(location: str) -> Dict[str, Any]:
+    """
+    Check whether a network outage is reported in a location.
+
+    Currently simulates an external telecom monitoring API.
+    """
+    location = location.strip()
+
+    if not location:
+        return {
+            "success": False,
+            "status": "UNKNOWN",
+            "message": "Customer location is required."
+        }
+
+    # Simulate an external monitoring API
+    is_area_outage = random.choice([True, False])
+
+    if is_area_outage:
+        return {
+            "success": True,
+            "location": location,
+            "status": "ACTIVE_OUTAGE",
+            "technicians_working": True,
+            "source": "simulated_monitoring_api",
+            "message": (
+                f"A simulated network outage is affecting {location}. "
+                "The technical team is working on restoring connectivity."
+            )
+        }
+
+    return {
+        "success": True,
+        "location": location,
+        "status": "NO_REPORTED_OUTAGE",
+        "source": "simulated_monitoring_api",
+        "message": (
+            f"No area-wide outage was reported in {location} "
+            "by the simulated monitoring service."
+        )
+    }
 
 
 @tool
